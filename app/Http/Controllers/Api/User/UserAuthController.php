@@ -114,35 +114,9 @@ class UserAuthController extends Controller
         try {
             DB::beginTransaction();
 
-            $existingUser = User::where('email', $request->email)
-                ->orWhere('mobile_number', $request->mobile_number)
-                ->first();
-
             $validator = Validator::make($request->all(), [
-                'country_id' => 'required|integer|exists:countries,id',
-                'first_name' => 'required|string|max:255',
-                'last_name' => 'required|string|max:255',
-                'mobile_number' => [
-                    'required',
-                    'string',
-                    'max:20',
-                    Rule::unique('users', 'mobile_number')->ignore(optional($existingUser)->id),
-                ],
-                'email' => [
-                    'required',
-                    'email',
-                    Rule::unique('users', 'email')->ignore(optional($existingUser)->id),
-                ],
-                'password' => [
-                    'required',
-                    'confirmed',
-                    'min:8',
-                    'regex:/[a-z]/',
-                    'regex:/[A-Z]/',
-                    'regex:/[0-9]/',
-                    'regex:/[@$!%*#?&]/',
-                ],
-                'password_confirmation' => 'required',
+                'login' => 'required|string', // email OR mobile
+                'password' => 'required|string|min:6',
             ]);
 
             if ($validator->fails()) {
@@ -157,36 +131,37 @@ class UserAuthController extends Controller
                 ], 200);
             }
 
-            if ($existingUser) {
-                if (!Hash::check($request->password, $existingUser->password)) {
-                    return response()->json([
-                        'success' => false,
-                        'status' => 400,
-                        'message' => 'Invalid credentials',
-                        'message_code' => 'validation_error',
-                        'data' => [],
-                        'errors' => [],
-                        'exception' => ''
-                    ], 200);
-                }
+            // Detect email or mobile
+            $user = User::where('email', $request->login)
+                ->orWhere('mobile_number', $request->login)
+                ->first();
 
-                $user = $existingUser;
-            } else {
-                do {
-                    $userUniqueId = generateUserUniqueId();
-                } while (User::where('user_unique_id', $userUniqueId)->exists());
-
-                $user = User::create([
-                    'user_unique_id' => $userUniqueId,
-                    'country_id' => $request->country_id,
-                    'first_name' => $request->first_name,
-                    'last_name' => $request->last_name,
-                    'mobile_number' => $request->mobile_number,
-                    'email' => $request->email,
-                    'password' => Hash::make($request->password),
-                ]);
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'User not found',
+                    'message_code' => 'user_not_found',
+                    'data' => [],
+                    'errors' => [],
+                    'exception' => ''
+                ], 200);
             }
 
+            // Check password
+            if (!Hash::check($request->password, $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 400,
+                    'message' => 'Invalid credentials',
+                    'message_code' => 'invalid_credentials',
+                    'data' => [],
+                    'errors' => [],
+                    'exception' => ''
+                ], 200);
+            }
+
+            // Create token
             $token = $user->createToken('authToken')->accessToken;
 
             DB::commit();
