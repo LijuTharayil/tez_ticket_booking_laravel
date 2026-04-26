@@ -105,7 +105,7 @@ class UserVerificationController extends Controller
                 $type = 'EmailVerify';
             } else {
                 $user->is_mobile_verified = 1;
-                $user->mobile_verified_at = now();
+                $user->mobile_number_verified_at = now();
                 $type = 'MobileVerify';
             }
             $user->save();
