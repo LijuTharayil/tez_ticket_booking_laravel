@@ -399,13 +399,13 @@ function getUserProfileDetails($userId)
         return $e;
         return null;
     }
+}
 
-    function generateBookingReference()
-    {
-        do {
-            $code = 'BK' . strtoupper(Str::random(16)); // e.g., BK9X2AB7CD
-        } while (UserTicket::where('booking_reference', $code)->exists());
+function generateBookingReference()
+{
+    do {
+        $code = 'BK' . strtoupper(Str::random(16)); // e.g., BK9X2AB7CD
+    } while (UserTicket::where('booking_reference', $code)->exists());
 
-        return $code;
-    }
+    return $code;
 }
