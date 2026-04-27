@@ -16,4 +16,9 @@ class UserSocialMedia extends Model
         'approved_by_admin_id',
         'approved_on'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

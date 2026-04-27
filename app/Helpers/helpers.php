@@ -162,42 +162,20 @@ function getDbDateFormat($date)
     }
 }
 
-function generateUserUniqueId()
+function generateUserUniqueId($length = 6)
 {
-    try
-    {
-        // generate alphabet string
-        $alphabet_length = 1;
-        $alphabet_characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        $alphabet_characters_length = strlen($alphabet_characters);
-        $alphabet_random_string = '';
-        $alphabet_random_string .= $alphabet_characters[rand(0, $alphabet_characters_length - 1)];
+    try {
+        $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        $charactersLength = strlen($characters);
+        $randomString = '';
 
-        // generate number string
-        $number_length = 1;
-        $number_characters = '1234567890';
-        $number_characters_length = strlen($number_characters);
-        $number_random_string = '';
-        $number_random_string .= $number_characters[rand(0, $number_characters_length - 1)];
-
-        // generate mixed string
-        $mixed_length = 4;
-        $mixed_characters = '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        $mixed_characters_length = strlen($mixed_characters);
-        $mixed_random_string = '';
-        for ($i = 0; $i < $mixed_length; $i++)
-        {
-            $mixed_random_string .= $mixed_characters[rand(0, $mixed_characters_length - 1)];
+        for ($i = 0; $i < $length; $i++) {
+            $randomString .= $characters[random_int(0, $charactersLength - 1)];
         }
-        // concatenate number, alphabet with random mixed string
-        $final_string = $mixed_random_string.$alphabet_random_string.$number_random_string;
-        // shuffle the final string
-        $reference_key = str_shuffle($final_string);
 
-        return $reference_key;
-    }
-    catch (\Exception $exception)
-    {
+        return $randomString;
+
+    } catch (\Exception $e) {
         return null;
     }
 
@@ -296,23 +274,44 @@ function applyBonus($user, $type, $referenceId = null, $referenceModel = null)
 
         if ($bonus && $bonus->token_qty > 0) {
 
-            if($type == 'PredictBonus')
-            {
+            // ✅ Predict Bonus
+            if ($type == 'PredictBonus') {
+
                 $alreadyCredited = Prediction::where('user_id', $user->id)
                     ->where('question_id', $referenceId)
                     ->exists();
-            } 
-            else 
-            {
-                $alreadyCredited = Transaction::where('user_id', $user->id)
-                ->where('type', $type)
-                ->where('account_type', 'Credit')
-                ->exists();
             }
-            
-            if (!$alreadyCredited) 
-            {
-                return createTransaction($user, $type, 'Credit', $bonus->token_qty, $referenceId, $referenceModel);
+
+            // ✅ Social Media Bonus (NEW)
+            elseif ($type == 'SocialMediaBonus') {
+
+                $alreadyCredited = Transaction::where('user_id', $user->id)
+                    ->where('type', $type)
+                    ->where('reference_id', $referenceId)
+                    ->where('reference_model', $referenceModel) // ex: UserSocialMedia::class
+                    ->where('account_type', 'Credit')
+                    ->exists();
+            }
+
+            // ✅ Default (other bonuses)
+            else {
+
+                $alreadyCredited = Transaction::where('user_id', $user->id)
+                    ->where('type', $type)
+                    ->where('account_type', 'Credit')
+                    ->exists();
+            }
+
+            // ✅ Credit if not already given
+            if (!$alreadyCredited) {
+                return createTransaction(
+                    $user,
+                    $type,
+                    'Credit',
+                    $bonus->token_qty,
+                    $referenceId,
+                    $referenceModel
+                );
             }
         }
 
@@ -376,11 +375,11 @@ function getUserProfileDetails($userId)
             'mobile' => $user->mobile_number,
 
             'is_email_verified' => (bool)$user->is_email_verified,
-            'is_mobile_verified' => (bool)$user->is_eis_mobile_verifiedmail_verified,
+            'is_mobile_verified' => (bool)$user->is_mobile_number_verified,
 
             'total_token_credit' => (string)$user->total_token_credit,
             'total_token_debit' => (string)$user->total_token_debit,
-            'total_token_balance' => (string)$user->total_token_balance,
+            'total_token_hold' => (string)$user->total_token_balance,
 
             'social_media' => $socialMedia->map(function ($item) {
                 return [

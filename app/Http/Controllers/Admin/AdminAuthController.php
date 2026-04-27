@@ -3,17 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class AdminAuthController extends Controller
 {
-    public function showAdminLoginForm()
-    {
-        return view('pages.admin.auth.login', ['url' => route('admin.login-view'), 'title'=>'Admin']);
-    }
-
     public function adminLogin(Request $request)
     {
         try
@@ -24,13 +21,16 @@ class AdminAuthController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'status_code' => 200,
-                    'message' => __('messages.validation_error'),
-                    'message_code' => 'validation_error',
-                    'errors' => $validator->errors()->all()
-                ]);
+                return response()->json(
+                    [
+                        'success' => false,
+                        'status' => 400,
+                        'message' => $validator->messages()->first(),
+                        'message_code' => 'validation_error',
+                        'data' => [],
+                        'errors' => $validator->errors()->all(),
+                        'exception' => ''
+                    ], 200);
             }
 
             if (isset($request->remember) && $request->remember == true) {
@@ -39,22 +39,51 @@ class AdminAuthController extends Controller
                 $remember = false;
             }
 
-            if (Auth::guard('admin')->attempt($request->only(['email', 'password']), $remember)) {
-                return response()->json([
-                    'success' => true,
-                    'status_code' => 200,
-                    'message' => 'Successfully Logged In',
-                    'message_code' => 'login_success',
-                    'url' => route('admin.dashboard')
-                ]);
+            $admin = Admin::where('email', $request->email)->first();
+
+            // Check if admin exists and password is correct
+            if (!$admin || !Hash::check($request->password, $admin->password)) {
+                return response()->json(
+                    [
+                        'success' => false,
+                        'status' => 400,
+                        'message' => 'Invalid Credentials',
+                        'message_code' => 'invalid_credentials',
+                        'data' => [],
+                        'errors' => [],
+                        'exception' => ''
+                    ], 200);
+            }
+
+            if ($admin)
+            {
+                return response()->json(
+                    [
+                        'success' => true,
+                        'status' => 200,
+                        'message' =>  'Logged In Success',
+                        'message_code' => 'admin_login_success',
+                        'data' => [
+                            'first_name' => $admin->first_name,
+                            'last_name' => $admin->last_name,
+                            'email' => $admin->email,
+                            'role' => $admin->role,
+                            'token' => $admin->createToken('TicketAdmin')->accessToken,
+                        ],
+                        'errors' => [],
+                        'exception' => ''
+                    ], 200);
             } else {
-                return response()->json([
-                    'success' => false,
-                    'status_code' => 200,
-                    'message' => __('messages.invalid_credentials'),
-                    'message_code' => 'login_failed',
-                    'errors' => []
-                ]);
+                return response()->json(
+                    [
+                        'success' => false,
+                        'status' => 400,
+                        'message' => 'Invalid Credentials',
+                        'message_code' => 'invalid_credentials',
+                        'data' => [],
+                        'errors' => [],
+                        'exception' => ''
+                    ], 200);
             }
         }
         catch (\Exception $exception)
@@ -62,19 +91,44 @@ class AdminAuthController extends Controller
             return response()->json(
                 [
                     'success' => false,
-                    'status_code' => 500,
+                    'status' => 500,
                     'message' => 'Oops!... Something Went Wrong',
                     'message_code' => 'try_catch',
-                    'exception' => $exception->getMessage(),
-                    'errors' => []
-                ], 500);
+                    'data' => [],
+                    'errors' => [],
+                    'exception' => $exception->getMessage()
+                ], 200);
         }
 
 
     }
 
     public function adminLogout(Request $request) {
-        auth('admin')->logout();
-        return redirect('admin/');
+        try
+        {
+           auth('admin')->logout();
+           return response()->json([
+            'success' => true,
+            'status' => 200,
+            'message' => 'Successfully Logged Out',
+            'message_code' => 'admin_logged_out_success',
+            'data' => [],
+            'errors' => [],
+            'exception' => ''
+        ], 200);
+        }
+        catch (\Exception $exception)
+        {
+            return response()->json(
+                [
+                    'success' => false,
+                    'status' => 500,
+                    'message' => 'Oops!... Something Went Wrong',
+                    'message_code' => 'try_catch',
+                    'data' => [],
+                    'errors' => [],
+                    'exception' => $exception->getMessage()
+                ], 200);
+        }
     }
 }
