@@ -28,24 +28,24 @@ Route::group(['middleware' => ['admin']], function () {
     Route::group(['middleware' => ['auth:admin']], function () {
             Route::get('dashboard', [AdminDashboardController::class, 'getAdminDashboard'])->name('admin.dashboard')->middleware('check_admin_role');
 
-            Route::get('users', [AdminUserController::class, 'getUsers'])->name('admin.users');
-            Route::post('approve-social-media', [AdminUserController::class, 'approveSocialMedia'])->name('admin.approve.social.media');
+            Route::get('users', [AdminUserController::class, 'getUsers'])->name('admin.users')->middleware('check_admin_role');
+            Route::post('approve-social-media', [AdminUserController::class, 'approveSocialMedia'])->name('admin.approve.social.media')->middleware('check_admin_role');
 
             Route::prefix('tickets')->group(function () {
                 Route::get('/', [AdminTicketController::class, 'getTickets']);
                 Route::post('/add', [AdminTicketController::class, 'addTicket']);
                 Route::post('/edit', [AdminTicketController::class, 'editTicket']);
                 Route::post('/delete', [AdminTicketController::class, 'deleteTicket']);
-            });
+            })->middleware('check_admin_role');
 
             Route::prefix('questions')->group(function () {
                 Route::get('/', [AdminQuestionController::class, 'listQuestions']);
                 Route::post('/add', [AdminQuestionController::class, 'addQuestion']);
                 Route::post('/edit', [AdminQuestionController::class, 'editQuestion']);
                 Route::post('/delete', [AdminQuestionController::class, 'deleteQuestion']);
-            });
+            })->middleware('check_admin_role');
 
-            Route::get('transactions', [AdminTicketController::class, 'transactionsList'])->name('admin.transactions');
+            Route::get('transactions', [AdminTicketController::class, 'transactionsList'])->name('admin.transactions')->middleware('check_admin_role');
 
 
             Route::post('logout', [AdminAuthController::class, 'adminLogout'])->name('admin.logout');
