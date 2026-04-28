@@ -33,6 +33,7 @@ Route::group(['middleware' => 'api', 'prefix' => 'v1/user'], function () {
     Route::post('register', [UserAuthController::class, 'register']);
     Route::post('login', [UserAuthController::class, 'login']);
     Route::get('get-countries', [UserHomeController::class, 'getCountries'])->name('user.leader-board');
+    Route::get('tickets', [UserTicketController::class, 'getTickets']);
 
 
     Route::group(['middleware' => 'auth:api', 'api_auth'], function () {
@@ -50,7 +51,6 @@ Route::group(['middleware' => 'api', 'prefix' => 'v1/user'], function () {
         Route::post('purchase-ticket', [UserTicketController::class, 'purchaseTicket']);
         Route::get('my-tickets', [UserTicketController::class, 'getMyTickets']);
 
-        Route::get('tickets', [UserTicketController::class, 'getTickets']);
         Route::get('transactions', [UserTransactionController::class, 'index']);
 
         Route::get('my-questions', [UserPredictionController::class, 'myQuestions']);
